@@ -18258,6 +18258,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "test_panel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "collections",
+ "editor",
+ "fs",
+ "gpui",
+ "language",
+ "log",
+ "paths",
+ "project",
+ "rope",
+ "serde",
+ "serde_json",
+ "settings",
+ "smol",
+ "task",
+ "terminal",
+ "terminal_view",
+ "text",
+ "ui",
+ "util",
+ "workspace",
+ "worktree",
+]
+
+[[package]]
 name = "text"
 version = "0.1.0"
 dependencies = [
@@ -22867,6 +22896,7 @@ dependencies = [
  "telemetry_events",
  "tempfile",
  "terminal_view",
+ "test_panel",
  "theme",
  "theme_extension",
  "theme_selector",

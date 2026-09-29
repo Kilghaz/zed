@@ -139,7 +139,7 @@ use std::{
     },
     time::Duration,
 };
-use task::{DebugScenario, SharedTaskContext, SpawnInTerminal};
+use task::{DebugScenario, ResolvedTask, SharedTaskContext, SpawnInTerminal};
 use theme::{ActiveTheme, ClientDecorationsExt, SystemAppearance};
 use theme_settings::ThemeSettings;
 pub use toolbar::{
@@ -195,6 +195,18 @@ pub trait TerminalProvider {
         window: &mut Window,
         cx: &mut App,
     ) -> Task<Option<Result<ExitStatus>>>;
+}
+
+/// Lets a panel take over spawning of the tasks it is interested in, such as tests, so that
+/// it can show their output itself instead of leaving it to the terminal panel.
+pub trait TaskSpawnHandler {
+    /// Returns `None` when the task should be spawned by the [`TerminalProvider`] instead.
+    fn spawn(
+        &self,
+        task: &ResolvedTask,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Task<Option<Result<ExitStatus>>>>;
 }
 
 pub trait DebuggerProvider {
@@ -1491,6 +1503,7 @@ pub struct Workspace {
     on_prompt_for_new_path: Option<PromptForNewPath>,
     on_prompt_for_open_path: Option<PromptForOpenPath>,
     terminal_provider: Option<Box<dyn TerminalProvider>>,
+    task_spawn_handler: Option<Box<dyn TaskSpawnHandler>>,
     debugger_provider: Option<Arc<dyn DebuggerProvider>>,
     serializable_items_tx: UnboundedSender<Box<dyn SerializableItemHandle>>,
     _items_serializer: Task<Result<()>>,
@@ -1965,6 +1978,7 @@ impl Workspace {
             on_prompt_for_new_path: None,
             on_prompt_for_open_path: None,
             terminal_provider: None,
+            task_spawn_handler: None,
             debugger_provider: None,
             serializable_items_tx,
             _items_serializer,
@@ -3157,6 +3171,10 @@ impl Workspace {
 
     pub fn set_terminal_provider(&mut self, provider: impl TerminalProvider + 'static) {
         self.terminal_provider = Some(Box::new(provider));
+    }
+
+    pub fn set_task_spawn_handler(&mut self, handler: impl TaskSpawnHandler + 'static) {
+        self.task_spawn_handler = Some(Box::new(handler));
     }
 
     pub fn set_debugger_provider(&mut self, provider: impl DebuggerProvider + 'static) {

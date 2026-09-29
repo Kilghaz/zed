@@ -118,6 +118,7 @@ To disable this behavior use:
   // Individual status bar icons can be hidden:
   // "project_panel": {"button": false },
   // "outline_panel": {"button": false },
+  // "test_panel": {"button": false },
   // "collaboration_panel": {"button": false },
   // "git_panel": {"button": false },
 
@@ -615,6 +616,13 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
       "show": null                // Show/hide: (auto, system, always, never)
     },
     "multi_buffer_hide_symbols": false  // Hide symbols in multi-buffer views (show only files)
+  },
+  // Test Panel
+  "test_panel": {
+    "button": true,               // Show/hide status bar icon
+    "default_width": 360,         // Default width when docked left or right
+    "default_height": 320,        // Default height when docked to the bottom
+    "dock": "bottom"              // Where to dock: left, right, bottom
   }
 ```
 

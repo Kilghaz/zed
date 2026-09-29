@@ -344,6 +344,47 @@ In doing so, you can change which task is shown in the runnables indicator.
 
 When you have a task definition that is bound to the runnable, you can quickly run it using [Code Actions](https://zed.dev/docs/configuring-languages?#code-actions) that you can trigger either via {#action editor::ToggleCodeActions} command or by the `cmd-.`/`ctrl-.` shortcut. Your task will be the first in the dropdown. The task will run immediately if there are no additional Code Actions for this line.
 
+## Test Panel
+
+The Test Panel ({#action test_panel::ToggleFocus} via the command palette, or the `Test Panel` button in the status bar) lists the tests of the project as a tree, grouped by file and nested the way they are in the source (for example `it` blocks under their `describe`, `#[test]` functions under their `mod tests`, or test methods under their class). A runnable counts as a test when the task bound to it carries a tag containing `test`, such as `rust-test`, `go-test`, `js-test` or `python-pytest-method`.
+
+### Discovering tests
+
+Tests are discovered in two ways:
+
+- Every file of the project is parsed in the background with the same tree-sitter runnable queries that draw the gutter run indicators, so the tree is complete before anything runs. The results are cached in Zed's cache directory, outside the project, keyed by each file's size and modification time; a missing or corrupt cache is simply rebuilt, and files are re-indexed when they change. Open files always use the editor's live data instead of the index.
+- Once the index has scanned the project, the panel asks the runners that can enumerate tests (`cargo test -- --list`, `pytest --collect-only`, `go test -list`) for their tests in the background, one runner at a time. This adds cases the static analysis cannot see, such as parametrized tests; they appear in the tree without a status. `Discover Tests` ({#action test_panel::DiscoverTests}) repeats this on demand.
+
+### Running tests
+
+Right-click a test, a test group or a file to run it, jump to its source, or copy its name. The toolbar offers:
+
+- `Run All Tests` ({#action test_panel::RunAllTests}) runs each test runner once for the whole project, derived from the language's test task with the file argument removed (such as `vitest run`, `pytest`, `go test ./...` or `cargo test -p <package>`), so the runner schedules the tests according to its own configuration. Running a single file uses the file-level task instead. Where a language has no such task, the top-level tests are run individually. When a file matches several runners (for example Vitest and `node --test`), the one invoked through the project's package manager is preferred.
+- `Rerun All Tests` ({#action test_panel::RerunAllTests}) runs the tasks of the current run again, and `Rerun Failed Tests` ({#action test_panel::RerunFailedTests}) runs only the tests that failed.
+- Toggles to show or hide passed, failed and ignored tests ({#action test_panel::ToggleShowPassed}, {#action test_panel::ToggleShowFailed}, {#action test_panel::ToggleShowIgnored}). Ignored tests are those marked as skipped in the source (for example `#[ignore]`, `it.skip`, `@pytest.mark.skip`) or reported as skipped by the runner; they are hidden by default.
+- A sort menu (alphabetically, by declaration order, or by duration), a history menu listing the last runs, and a menu with `Expand All` and `Collapse All` ({#action test_panel::ExpandAllEntries}, {#action test_panel::CollapseAllEntries}).
+
+Every test task scheduled in the workspace is shown in the Test Panel instead of the terminal panel: runs started from the panel, from a gutter run indicator, via {#action editor::SpawnNearestTask}, or from a task configuration whose tags or command mention tests (such as `cargo test` or `pytest`). Results accumulate across runs: a run only replaces the outcome of the tests it executed, so rerunning one test keeps every other test's last result. When a runner filtered down to a single test reports the file's other tests as skipped, those reports are ignored. Previous runs remain available in the history menu, and selecting one shows that run's results alone.
+
+### Test output
+
+The panel parses the runner's output as it arrives and attributes it to the individual tests. The output shown on the right belongs to the selected entry: a test shows the lines the runner attributed to it, a test group shows the output of the group's hooks (such as `beforeAll`), the file shows all of its tests' output, and the run entry at the top shows everything the runner did not attribute to a test, such as compilation and the summary. The button in the output header switches to the full, unparsed output of the run instead. Tests that the runner reported but that are not listed (for example when a package-level task runs tests from files that are not open) are added to the tree, grouped by file where the runner reports one.
+
+Output is attributed with structured reporters where possible: Zed ships reporter scripts for Vitest (`--reporter <script>`), Jest (`--reporters <script>`) and pytest (`-p zed_pytest_reporter`, loaded through `PYTHONPATH`), and uses `go test -json`; these are added to the command unless a reporter flag is already present. `cargo test` output is parsed from libtest's text format, and remote projects fall back to parsing the runners' verbose text output (`--reporter=verbose`, `--verbose`, `-v -rA`). Colored output is disabled for parsing. Runs of other runners are shown, but their output cannot be attributed to individual tests.
+
+The divider between the list and the output can be dragged to resize them. The panel can be docked to the left, right or bottom and hidden from the status bar via the `test_panel` settings:
+
+```json [settings]
+{
+  "test_panel": {
+    "button": true,
+    "default_width": 360,
+    "default_height": 320,
+    "dock": "bottom"
+  }
+}
+```
+
 ## Running Bash Scripts
 
 You can run bash scripts directly from Zed. When you open a `.sh` or `.bash` file, Zed automatically detects the script as runnable and makes it available in the task picker.

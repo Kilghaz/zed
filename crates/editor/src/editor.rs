@@ -129,6 +129,7 @@ pub use multi_buffer::{
     MultiBufferOffset, MultiBufferOffsetUtf16, MultiBufferSnapshot, PathKey, RowInfo, ToOffset,
     ToPoint,
 };
+pub use runnables::{RunnableEntry, RunnableTaskStatus, RunnableTasks};
 pub use split::{DiffStyleControls, SplittableEditor, ToggleSplitDiff};
 pub use split_editor_view::SplitEditorView;
 pub use text::Bias;
@@ -285,7 +286,7 @@ use crate::{
         InlineValueCache,
         inlay_hints::{LspInlayHintData, inlay_hint_settings},
     },
-    runnables::{ResolvedTasks, RunnableData, RunnableTaskStatus, RunnableTasks},
+    runnables::{ResolvedTasks, RunnableData},
     scroll::{ScrollOffset, ScrollPixelOffset},
     selections_collection::resolve_selections_wrapping_blocks,
     semantic_tokens::SemanticTokenState,

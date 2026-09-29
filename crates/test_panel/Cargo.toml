@@ -1,0 +1,38 @@
+[package]
+name = "test_panel"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+license = "GPL-3.0-or-later"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/test_panel.rs"
+doctest = false
+
+[dependencies]
+worktree.workspace = true
+smol.workspace = true
+serde.workspace = true
+rope.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+collections.workspace = true
+editor.workspace = true
+fs.workspace = true
+gpui.workspace = true
+util.workspace = true
+language.workspace = true
+log.workspace = true
+paths.workspace = true
+project.workspace = true
+serde_json.workspace = true
+settings.workspace = true
+task.workspace = true
+terminal.workspace = true
+terminal_view.workspace = true
+text.workspace = true
+ui.workspace = true
+workspace.workspace = true

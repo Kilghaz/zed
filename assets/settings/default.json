@@ -956,6 +956,16 @@
       "on_drop": true,
     },
   },
+  "test_panel": {
+    // Whether to show the test panel button in the status bar
+    "button": true,
+    // Default width of the test panel when docked to the left or right.
+    "default_width": 360,
+    // Default height of the test panel when docked to the bottom.
+    "default_height": 320,
+    // Where to dock the test panel. Can be 'left', 'right' or 'bottom'.
+    "dock": "bottom"
+  },
   "outline_panel": {
     // Whether to show the outline panel button in the status bar
     "button": true,

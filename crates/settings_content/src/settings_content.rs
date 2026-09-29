@@ -269,6 +269,8 @@ pub struct SettingsContent {
 
     pub outline_panel: Option<OutlinePanelSettingsContent>,
 
+    pub test_panel: Option<TestPanelSettingsContent>,
+
     pub project_panel: Option<ProjectPanelSettingsContent>,
 
     /// Configuration for Node-related features
@@ -404,6 +406,7 @@ fallible_options::flattened_deserialize!(SettingsContent {
         git,
         global_lsp_settings, image_viewer, markdown_preview, repl, helix_mode, hide_mouse,
         journal, log, line_indicator_format, language_models, outline_panel, project_panel,
+        test_panel,
         node, proxy, reduce_motion, server_url, credentials_url, session, telemetry, terminal,
         title_bar, vim_mode, calls, which_key, vim, modeline_lines, feature_flags,
         instrumentation,
@@ -1217,6 +1220,27 @@ pub struct OutlinePanelSettingsContent {
     ///
     /// Default: false
     pub multi_buffer_hide_symbols: Option<bool>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom, Debug, PartialEq)]
+pub struct TestPanelSettingsContent {
+    /// Whether to show the test panel button in the status bar.
+    ///
+    /// Default: true
+    pub button: Option<bool>,
+    /// Customize default width (in pixels) taken by the test panel when docked to the left or right
+    ///
+    /// Default: 360
+    pub default_width: Option<PixelSetting>,
+    /// Customize default height (in pixels) taken by the test panel when docked to the bottom
+    ///
+    /// Default: 320
+    pub default_height: Option<PixelSetting>,
+    /// The position of the test panel
+    ///
+    /// Default: bottom
+    pub dock: Option<DockPosition>,
 }
 
 #[derive(

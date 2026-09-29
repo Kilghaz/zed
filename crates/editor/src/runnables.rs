@@ -1,5 +1,7 @@
 use std::{collections::BTreeMap, mem, ops::Range, sync::Arc};
 
+use anyhow::Result;
+
 use clock::Global;
 use collections::{HashMap, HashSet};
 use gpui::{
@@ -112,10 +114,20 @@ impl RunnableData {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum RunnableTaskStatus {
+pub enum RunnableTaskStatus {
     Running,
     Passed,
     Failed,
+}
+
+/// A runnable discovered in one of the editor's buffers, together with the
+/// status of its most recent run, if any.
+#[derive(Clone, Debug)]
+pub struct RunnableEntry {
+    pub buffer: Entity<Buffer>,
+    pub buffer_row: BufferRow,
+    pub tasks: Arc<RunnableTasks>,
+    pub status: Option<RunnableTaskStatus>,
 }
 
 impl From<workspace::tasks::ScheduledTaskResult> for RunnableTaskStatus {
@@ -348,19 +360,19 @@ impl Editor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some((workspace, _)) = self.workspace.clone() else {
-            return;
-        };
-        let Some(project) = self.project.clone() else {
-            return;
-        };
-
         // Try to find a closest, enclosing node using tree-sitter that has a task
         let Some((buffer, buffer_row, tasks)) = self
             .find_enclosing_node_task(cx)
             // Or find the task that's closest in row-distance.
             .or_else(|| self.find_closest_task(cx))
         else {
+            return;
+        };
+
+        let Some((workspace, _)) = self.workspace.clone() else {
+            return;
+        };
+        let Some(project) = self.project.clone() else {
             return;
         };
 
@@ -412,6 +424,50 @@ impl Editor {
         .detach();
     }
 
+    /// Returns every runnable known to this editor, along with the status of its last run.
+    pub fn runnable_entries(&self, cx: &App) -> Vec<RunnableEntry> {
+        let multi_buffer = self.buffer.read(cx);
+        self.runnables
+            .runnables
+            .iter()
+            .flat_map(|(buffer_id, (_, tasks_by_row))| {
+                tasks_by_row
+                    .iter()
+                    .map(move |(row, tasks)| (*buffer_id, *row, tasks))
+            })
+            .filter_map(|(buffer_id, buffer_row, tasks)| {
+                let buffer = multi_buffer.buffer(buffer_id)?;
+                Some(RunnableEntry {
+                    buffer,
+                    buffer_row,
+                    tasks: Arc::new(tasks.clone()),
+                    status: self.runnables.task_status((buffer_id, buffer_row)),
+                })
+            })
+            .collect()
+    }
+
+    /// Builds the task context for the runnable at the given buffer row, the same way the
+    /// gutter run indicator does before resolving the runnable's task templates.
+    pub fn runnable_task_context(
+        &self,
+        buffer_id: BufferId,
+        buffer_row: BufferRow,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<Option<TaskContext>>> {
+        let Some(project) = self.project.clone() else {
+            return Task::ready(Ok(None));
+        };
+        let Some(tasks) = self.runnables.runnables((buffer_id, buffer_row)) else {
+            return Task::ready(Ok(None));
+        };
+        let Some(buffer) = self.buffer.read(cx).buffer(buffer_id) else {
+            return Task::ready(Ok(None));
+        };
+        let tasks = Arc::new(tasks.clone());
+        Self::build_tasks_context(&project, &buffer, buffer_row, &tasks, cx)
+    }
+
     pub fn clear_runnables(&mut self, for_buffer: Option<BufferId>) {
         if let Some(buffer_id) = for_buffer {
             self.runnables.runnables.remove(&buffer_id);
@@ -434,7 +490,7 @@ impl Editor {
         self.runnables.task_status((buffer_id, buffer_row))
     }
 
-    pub(crate) fn set_runnable_task_status(
+    pub fn set_runnable_task_status(
         &mut self,
         buffer_id: BufferId,
         buffer_row: BufferRow,
@@ -446,7 +502,13 @@ impl Editor {
         cx.notify();
     }
 
-    pub(crate) fn clear_runnable_task_status(
+    /// Forgets the outcome of every runnable's last run, e.g. when a new test run starts.
+    pub fn clear_runnable_task_statuses(&mut self, cx: &mut Context<Self>) {
+        self.runnables.task_statuses.clear();
+        cx.notify();
+    }
+
+    pub fn clear_runnable_task_status(
         &mut self,
         buffer_id: BufferId,
         buffer_row: BufferRow,

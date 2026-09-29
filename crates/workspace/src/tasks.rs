@@ -108,6 +108,7 @@ impl Workspace {
         cx: &mut Context<Workspace>,
     ) {
         let spawn_in_terminal = resolved_task.resolved.clone();
+        let task_for_spawn_handler = resolved_task.clone();
         if !omit_history {
             if let Some(debugger_provider) = self.debugger_provider.as_ref() {
                 debugger_provider.task_scheduled(cx);
@@ -129,12 +130,19 @@ impl Workspace {
                 Self::save_for_task(&workspace, spawn_in_terminal.save, cx).await;
 
                 let spawn_task = workspace.update_in(cx, |workspace, window, cx| {
-                    workspace
-                        .terminal_provider
+                    let handled_spawn = workspace
+                        .task_spawn_handler
                         .as_ref()
-                        .map(|terminal_provider| {
-                            terminal_provider.spawn(spawn_in_terminal, window, cx)
-                        })
+                        .and_then(|handler| handler.spawn(&task_for_spawn_handler, window, cx));
+                    match handled_spawn {
+                        Some(spawn_task) => Some(spawn_task),
+                        None => workspace
+                            .terminal_provider
+                            .as_ref()
+                            .map(|terminal_provider| {
+                                terminal_provider.spawn(spawn_in_terminal, window, cx)
+                            }),
+                    }
                 });
                 if let Some(spawn_task) = spawn_task.ok().flatten() {
                     let res = cx.background_spawn(spawn_task).await;
